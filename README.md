@@ -99,47 +99,55 @@ Reports are saved to `data/reports/`:
 - Counts mentions in the last 48h and compares to the prior 48h for momentum
 - Sentiment uses keyword scoring (`calls`, `puts`, `moon`, etc.) on text containing each ticker
 
-## Deploy on Vercel
+## Deploy on Vercel (scheduled report + cached page)
 
-This repo includes a [Vercel](https://vercel.com) serverless setup:
+Visitors see a **pre-generated** report. A cron job rebuilds it once per day.
 
 | Path | Purpose |
 |------|---------|
-| `/` | Landing page with links |
-| `/api/run` | Generates and returns the HTML report (`api/index.py` + FastAPI) |
-| Cron `0 11 * * *` | Daily refresh (requires Vercel Pro) |
+| `/` or `/api/latest` | Serve the cached HTML report (fast) |
+| `/api/cron` | Generate + save report (Vercel Cron only) |
+| Cron `0 11 * * *` | Daily refresh at 11:00 UTC |
 
-### 1. Push to GitHub
+### 1. Create Vercel Blob storage
 
-Connect the repo to Vercel (Import Project → your GitHub repo).
+In the Vercel project → **Storage** → **Create Blob** → connect to the project.  
+This sets `BLOB_READ_WRITE_TOKEN` automatically.
 
-### 2. Set environment variables
+### 2. Environment variables
 
-In Vercel → **Settings → Environment Variables**, add the same keys as `.env`:
+In **Settings → Environment Variables**:
 
-- `REDDIT_USER_AGENT` (required for Reddit)
-- `GEMINI_API_KEY` (optional)
-- `WSB_WINDOW_HOURS`, `GEMINI_USE_GROUNDING`, etc.
-
-Do **not** commit `.env`.
+| Variable | Required |
+|----------|----------|
+| `BLOB_READ_WRITE_TOKEN` | Yes (from Blob store) |
+| `CRON_SECRET` | Yes (random string; Vercel Cron sends this) |
+| `REDDIT_USER_AGENT` | Yes |
+| `GEMINI_API_KEY` | If using Gemini |
+| Others | Same as `.env.example` |
 
 ### 3. Deploy
 
 ```bash
-npm i -g vercel
-vercel
+vercel --prod
 ```
 
-Production URL example: `https://your-app.vercel.app/api/run`
+### 4. First report
 
-### Vercel limitations
+Trigger once manually (use the same `CRON_SECRET` as in Vercel):
 
-- **Timeouts:** Full Reddit scans (800+ posts) can take 15+ minutes locally. On Vercel, `/api/run` caps Reddit to **200 posts** unless you set `VERCEL_ALLOW_FULL_REDDIT_SCAN=true`. Increase function **Max Duration** in the Vercel project settings (Pro: up to 300s).
-- **No persistent disk:** Reports are generated per request; use the Pi + `latest.html` if you want files on disk.
-- **Cron:** Scheduled jobs need [Vercel Cron on a Pro team](https://vercel.com/docs/cron-jobs).
-- **Gemini-only** (`/api/run?gemini_only=1`) is the fastest option on serverless (~30–90s).
+```bash
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  "https://your-app.vercel.app/api/cron"
+```
 
-**Recommended split:** Run heavy Reddit scraping on your **Raspberry Pi** (cron), and use Vercel only for hosting a static `public/latest.html` (commit or CI upload), or use Vercel for **Gemini-only** live reports.
+Then open `https://your-app.vercel.app/` — everyone sees that cached report until the next cron run.
+
+### Vercel notes
+
+- **Cron** requires [Vercel Pro](https://vercel.com/docs/cron-jobs) on your team.
+- Set **Max Duration** to 300s (Pro) under Functions — Reddit + Gemini can take several minutes.
+- Locally (no Blob token), reports cache to `data/reports/latest.html` instead.
 
 ## Raspberry Pi cron (daily)
 

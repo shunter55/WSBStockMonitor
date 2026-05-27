@@ -10,6 +10,7 @@ from wsb_monitor.html_report import render_html
 from wsb_monitor.prompts import gemini_queries
 from wsb_monitor.reddit import collect_wsb_data
 from wsb_monitor.report import build_gemini_section, build_reddit_section
+from wsb_monitor.report_cache import load_latest_report, save_latest_report
 
 
 def build_report(
@@ -89,6 +90,21 @@ def generate_report_html(
         gemini_only=gemini_only,
     )
     return render_html(report)
+
+
+def refresh_cached_report(
+    *,
+    reddit_only: bool = False,
+    gemini_only: bool = False,
+) -> dict[str, Any]:
+    """Generate a new report and save it as the cached 'latest' copy."""
+    html = generate_report_html(reddit_only=reddit_only, gemini_only=gemini_only)
+    meta = save_latest_report(html)
+    return {"ok": True, "meta": meta}
+
+
+def get_cached_report_html() -> tuple[str | None, dict[str, Any] | None]:
+    return load_latest_report()
 
 
 def _with_only_reddit(settings: AppSettings) -> AppSettings:
