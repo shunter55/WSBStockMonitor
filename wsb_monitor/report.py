@@ -15,9 +15,11 @@ def build_gemini_section(
     title: str,
     query: str,
     raw_payload: dict[str, Any],
+    parsed: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     answer_text = extract_answer_text(raw_payload)
-    parsed = parse_stocks_payload(raw_payload)
+    if parsed is None:
+        parsed = parse_stocks_payload(raw_payload)
     return {
         "id": section_id,
         "title": title,

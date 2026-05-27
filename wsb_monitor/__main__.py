@@ -11,7 +11,7 @@ from pathlib import Path
 from wsb_monitor.config import AppSettings, load_settings
 from wsb_monitor.config import load_window_hours
 from wsb_monitor.html_report import html_from_json_file
-from wsb_monitor.prompts import gemini_queries
+from wsb_monitor.prompts import gemini_combined_query
 from wsb_monitor.html_report import render_html
 from wsb_monitor.report import print_summary, write_report
 from wsb_monitor.report_cache import save_latest_report
@@ -76,9 +76,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"Would run with configured sources ({window_hours}h window):")
         print("  - Reddit: scan r/wallstreetbets (OAuth if configured, else public JSON)")
         if not args.reddit_only:
-            print("  - Gemini: AI estimates for comparison")
-            for _, title, query in gemini_queries(window_hours):
-                print(f"\n--- Gemini: {title} ---\n{query}\n")
+            print("  - Gemini: AI estimates (single combined request)")
+            print(f"\n--- Gemini combined query ---\n{gemini_combined_query(window_hours)}\n")
         return 0
 
     settings = load_settings(

@@ -7,7 +7,8 @@ from typing import Any
 from wsb_monitor.client import create_gemini_client
 from wsb_monitor.config import AppSettings, load_settings
 from wsb_monitor.html_report import render_html
-from wsb_monitor.prompts import gemini_queries
+from wsb_monitor.prompts import gemini_combined_query, gemini_queries
+from wsb_monitor.parser import parse_gemini_section_payload
 from wsb_monitor.reddit import collect_wsb_data
 from wsb_monitor.report import build_gemini_section, build_reddit_section
 from wsb_monitor.report_cache import load_latest_report, save_latest_report
@@ -50,15 +51,17 @@ def build_report(
 
     if settings.gemini:
         client = create_gemini_client(settings.gemini)
+        combined_query = gemini_combined_query(window_hours)
+        raw = client.query_combined()
         gemini_sections = []
-        for section_id, title, query in gemini_queries(window_hours):
-            raw = client.query(query)
+        for section_id, title, _ in gemini_queries(window_hours):
             gemini_sections.append(
                 build_gemini_section(
                     section_id=section_id,
                     title=f"{title} — Gemini",
-                    query=query,
+                    query=combined_query,
                     raw_payload=raw,
+                    parsed=parse_gemini_section_payload(raw, section_id),
                 )
             )
         sources["gemini"] = {

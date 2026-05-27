@@ -35,6 +35,15 @@ STOCKS_RESPONSE_SCHEMA: dict = {
     "required": ["stocks", "sources_summary", "as_of"],
 }
 
+GEMINI_COMBINED_RESPONSE_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "top_mentions": STOCKS_RESPONSE_SCHEMA,
+        "mention_momentum": STOCKS_RESPONSE_SCHEMA,
+    },
+    "required": ["top_mentions", "mention_momentum"],
+}
+
 
 def _hours_label(window_hours: int) -> str:
     return f"{window_hours} hour" if window_hours == 1 else f"{window_hours} hours"
@@ -85,6 +94,53 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
   "as_of": "ISO-8601 timestamp"
 }
 Include exactly 10 items in stocks.
+""".strip()
+
+COMBINED_JSON_RESPONSE_INSTRUCTION = """
+Respond with ONLY valid JSON (no markdown fences, no extra text) matching this shape:
+{
+  "top_mentions": {
+    "stocks": [
+      {
+        "rank": 1,
+        "ticker": "GME",
+        "mention_metric": "estimated mentions (96h)",
+        "mention_value": 1200,
+        "bullish_pct": 55.0,
+        "bearish_pct": 45.0
+      }
+    ],
+    "sources_summary": "...",
+    "as_of": "ISO-8601 timestamp"
+  },
+  "mention_momentum": {
+    "stocks": [
+      {
+        "rank": 1,
+        "ticker": "GME",
+        "mention_metric": "mention increase vs prior 96h",
+        "mention_value": 400,
+        "bullish_pct": 60.0,
+        "bearish_pct": 40.0
+      }
+    ],
+    "sources_summary": "...",
+    "as_of": "ISO-8601 timestamp"
+  }
+}
+Each stocks array must have exactly 10 items with rank (1-10), mention_metric, and mention_value.
+""".strip()
+
+
+def gemini_combined_query(window_hours: int) -> str:
+    return f"""
+Answer both of the following about Reddit r/wallstreetbets in a single JSON response.
+
+## Section 1 — top_mentions
+{top_mentions_query(window_hours)}
+
+## Section 2 — mention_momentum
+{momentum_mentions_query(window_hours)}
 """.strip()
 
 

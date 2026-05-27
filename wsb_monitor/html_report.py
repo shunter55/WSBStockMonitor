@@ -237,6 +237,22 @@ def _google_finance_url(ticker: str, exchange: str = "NASDAQ") -> str:
     return f"https://www.google.com/finance/beta/quote/{quote(symbol)}:{exchange}"
 
 
+def _format_mentions_cell(stock: dict[str, Any]) -> str:
+    metric = str(stock.get("mention_metric") or "").strip()
+    value = stock.get("mention_value")
+    if value is not None and value != "":
+        value_text = str(value)
+        if metric:
+            return f"{metric}: {value_text}"
+        return value_text
+    if growth := stock.get("mention_growth_pct"):
+        prefix = f"{metric}: " if metric else ""
+        return f"{prefix}+{growth}%"
+    if metric:
+        return metric
+    return "—"
+
+
 def _render_ticker_cell(ticker_raw: str) -> str:
     symbol = str(ticker_raw).strip().upper()
     label = html.escape(symbol or "?")
@@ -255,19 +271,16 @@ def _render_section(section: dict[str, Any]) -> str:
     stocks = section.get("parsed", {}).get("stocks") or []
     rows: list[str] = []
 
-    for stock in stocks:
-        metric = html.escape(str(stock.get("mention_metric", "")))
-        value = html.escape(str(stock.get("mention_value", "")))
+    for index, stock in enumerate(stocks):
+        rank = stock.get("rank", index + 1)
+        mentions = html.escape(_format_mentions_cell(stock))
         bull = html.escape(str(stock.get("bullish_pct", "?")))
         bear = html.escape(str(stock.get("bearish_pct", "?")))
-        extra = ""
-        if growth := stock.get("mention_growth_pct"):
-            extra = f' <span class="muted">(+{html.escape(str(growth))}%)</span>'
         rows.append(
             f"<tr>"
-            f"<td>#{stock.get('rank', '?')}</td>"
+            f"<td>#{rank}</td>"
             f"{_render_ticker_cell(str(stock.get('ticker', '?')))}"
-            f"<td>{metric}: {value}{extra}</td>"
+            f"<td>{mentions}</td>"
             f'<td class="bull">{bull}%</td>'
             f'<td class="bear">{bear}%</td>'
             f"</tr>"

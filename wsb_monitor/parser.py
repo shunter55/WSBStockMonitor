@@ -48,8 +48,142 @@ def parse_stocks_json(answer_text: str) -> dict[str, Any]:
 def parse_stocks_payload(raw_payload: dict[str, Any]) -> dict[str, Any]:
     if parsed := raw_payload.get("parsed"):
         if isinstance(parsed, dict) and "stocks" in parsed:
-            return parsed
-    return parse_stocks_json(extract_answer_text(raw_payload))
+            return normalize_stocks_section(parsed)
+    return normalize_stocks_section(parse_stocks_json(extract_answer_text(raw_payload)))
+
+
+def parse_gemini_section_payload(
+    raw_payload: dict[str, Any],
+    section_id: str,
+) -> dict[str, Any]:
+    parsed = raw_payload.get("parsed")
+    if isinstance(parsed, dict):
+        section = parsed.get(section_id)
+        if isinstance(section, dict) and "stocks" in section:
+            return normalize_stocks_section(section, section_id=section_id)
+    raise ValueError(f"Gemini response missing parsed section '{section_id}'")
+
+
+def normalize_gemini_parsed(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Map alternate Gemini field names to the report schema."""
+    if "stocks" in parsed:
+        parsed["stocks"] = normalize_stocks(parsed["stocks"])
+    for section_id in ("top_mentions", "mention_momentum"):
+        section = parsed.get(section_id)
+        if isinstance(section, dict) and "stocks" in section:
+            parsed[section_id] = normalize_stocks_section(section, section_id=section_id)
+    return parsed
+
+
+def normalize_stocks_section(
+    section: dict[str, Any],
+    *,
+    section_id: str | None = None,
+) -> dict[str, Any]:
+    stocks = section.get("stocks")
+    if not isinstance(stocks, list):
+        return section
+    return {**section, "stocks": normalize_stocks(stocks, section_id=section_id)}
+
+
+def normalize_stocks(
+    stocks: list[Any],
+    *,
+    section_id: str | None = None,
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(stocks):
+        if isinstance(item, dict):
+            normalized.append(normalize_stock(item, index=index, section_id=section_id))
+    return normalized
+
+
+def normalize_stock(
+    stock: dict[str, Any],
+    *,
+    index: int,
+    section_id: str | None = None,
+) -> dict[str, Any]:
+    out = dict(stock)
+
+    rank = _coerce_int(
+        stock.get("rank"),
+        stock.get("position"),
+        stock.get("order"),
+    )
+    out["rank"] = rank if rank is not None else index + 1
+
+    ticker = stock.get("ticker") or stock.get("symbol") or stock.get("ticker_symbol")
+    if ticker is not None:
+        out["ticker"] = str(ticker).upper().strip().lstrip("$")
+
+    value = stock.get("mention_value")
+    if value is None:
+        value = _first_present(
+            stock,
+            "mentions",
+            "mention_count",
+            "estimated_mentions",
+            "mention_volume",
+            "volume",
+            "count",
+            "increase",
+            "mention_increase",
+            "growth",
+            "mention_growth",
+        )
+    if value is not None:
+        out["mention_value"] = _coerce_number(value)
+
+    metric = stock.get("mention_metric") or stock.get("metric") or stock.get("mention_type")
+    if not metric and section_id == "top_mentions":
+        metric = "estimated mentions"
+    elif not metric and section_id == "mention_momentum":
+        metric = "mention increase"
+    if metric:
+        out["mention_metric"] = str(metric)
+
+    if stock.get("mention_growth_pct") is None:
+        growth = _first_present(
+            stock,
+            "mention_growth_pct",
+            "growth_pct",
+            "percent_increase",
+            "increase_pct",
+        )
+        if growth is not None:
+            out["mention_growth_pct"] = _coerce_number(growth)
+
+    return out
+
+
+def _first_present(data: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in data and data[key] is not None and data[key] != "":
+            return data[key]
+    return None
+
+
+def _coerce_int(*values: Any) -> int | None:
+    for value in values:
+        if value is None or value == "":
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _coerce_number(value: Any) -> int | float:
+    if isinstance(value, (int, float)):
+        return value
+    text = str(value).strip().replace(",", "")
+    if not text:
+        return 0
+    if "." in text:
+        return float(text)
+    return int(text)
 
 
 def _flatten_text_block(block: dict[str, Any]) -> list[str]:
