@@ -8,12 +8,20 @@ import requests
 
 from wsb_monitor.config import RedditSettings
 
-REDDIT_BASE = "https://www.reddit.com"
+REDDIT_HOSTS = (
+    "https://www.reddit.com",
+    "https://old.reddit.com",
+)
 
 
 def iter_posts(settings: RedditSettings, prior_cutoff: float) -> Iterator[tuple[float, list[str]]]:
     session = requests.Session()
-    session.headers.update({"User-Agent": settings.user_agent})
+    session.headers.update(
+        {
+            "User-Agent": settings.user_agent,
+            "Accept": "application/json",
+        }
+    )
 
     after: str | None = None
     posts_yielded = 0
@@ -60,11 +68,22 @@ def _fetch_listing(
     *,
     after: str | None,
 ) -> dict[str, Any]:
-    url = f"{REDDIT_BASE}/r/{settings.subreddit}/new.json"
     params: dict[str, str | int] = {"limit": 100, "raw_json": 1}
     if after:
         params["after"] = after
-    return _get_json(session, url, params=params, settings=settings)
+    last_error: Exception | None = None
+    for host in REDDIT_HOSTS:
+        url = f"{host}/r/{settings.subreddit}/new.json"
+        try:
+            return _get_json(session, url, params=params, settings=settings)
+        except requests.HTTPError as exc:
+            last_error = exc
+            if exc.response is not None and exc.response.status_code in {403, 451}:
+                continue
+            raise
+    if last_error:
+        raise last_error
+    raise RuntimeError("Could not fetch Reddit listing")
 
 
 def _fetch_comment_bodies(
@@ -76,7 +95,11 @@ def _fetch_comment_bodies(
     if not permalink or max_comments <= 0:
         return []
 
-    url = urljoin(REDDIT_BASE, permalink.rstrip("/") + ".json")
+    base = REDDIT_HOSTS[0]
+    if permalink.startswith("http"):
+        url = permalink.rstrip("/") + ".json"
+    else:
+        url = urljoin(base, permalink.rstrip("/") + ".json")
     time.sleep(delay_sec)
     payload = _get_json(session, url, params={"raw_json": 1, "limit": max_comments})
 

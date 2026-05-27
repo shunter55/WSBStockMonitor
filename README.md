@@ -146,7 +146,8 @@ Then open `https://your-app.vercel.app/` — everyone sees that cached report un
 ### Vercel notes
 
 - **Cron** requires [Vercel Pro](https://vercel.com/docs/cron-jobs) on your team.
-- Set **Max Duration** to 300s (Pro) under Functions — Reddit + Gemini can take several minutes.
+- Set **Max Duration** to 300s (Pro) under Functions — Gemini can take 1–3 minutes.
+- **Reddit on Vercel:** Public Reddit JSON returns **403** from Vercel’s servers. Scheduled runs default to **`CRON_MODE=gemini_only`**. Use your **Pi** for real Reddit counts (`python -m wsb_monitor --reddit-only`), or add `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` for OAuth on Vercel.
 - Locally (no Blob token), reports cache to `data/reports/latest.html` instead.
 
 ## Raspberry Pi cron (daily)

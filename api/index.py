@@ -35,6 +35,40 @@ def _verify_cron_secret(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def _resolve_cron_modes(
+    *,
+    reddit_only: bool,
+    gemini_only: bool,
+) -> tuple[bool, bool, str | None]:
+    """Pick data sources for scheduled runs. Reddit public JSON is blocked from Vercel IPs."""
+    if reddit_only and gemini_only:
+        raise HTTPException(status_code=400, detail="Use only one of reddit_only or gemini_only")
+
+    if reddit_only:
+        return True, False, None
+    if gemini_only:
+        return False, True, None
+
+    mode = os.getenv("CRON_MODE", "").strip().lower()
+    if mode == "reddit_only":
+        return True, False, None
+    if mode == "gemini_only":
+        return False, True, None
+    if mode == "both":
+        return False, False, None
+
+    # Default on Vercel: Gemini only (Reddit returns 403 from datacenter IPs without OAuth)
+    if os.getenv("VERCEL") and not os.getenv("REDDIT_CLIENT_ID"):
+        return (
+            False,
+            True,
+            "Reddit public API blocked from Vercel; using Gemini only. "
+            "Run Reddit scans on your Pi, or add REDDIT_CLIENT_ID for OAuth.",
+        )
+
+    return False, False, None
+
+
 @app.get("/")
 def home() -> RedirectResponse:
     return RedirectResponse(url="/api/latest", status_code=302)
@@ -72,7 +106,20 @@ def cron_refresh(
     _verify_cron_secret(authorization)
     try:
         _apply_vercel_limits()
-        result = refresh_cached_report(reddit_only=reddit_only, gemini_only=gemini_only)
+        use_reddit_only, use_gemini_only, note = _resolve_cron_modes(
+            reddit_only=reddit_only,
+            gemini_only=gemini_only,
+        )
+        result = refresh_cached_report(
+            reddit_only=use_reddit_only,
+            gemini_only=use_gemini_only,
+        )
+        if note:
+            result["note"] = note
+        result["modes"] = {
+            "reddit_only": use_reddit_only,
+            "gemini_only": use_gemini_only,
+        }
         return JSONResponse(result)
     except Exception as exc:
         return JSONResponse(
