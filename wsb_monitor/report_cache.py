@@ -5,10 +5,12 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 import requests
 
+BLOB_API_URL = "https://vercel.com/api/blob"
+BLOB_API_VERSION = "12"
 BLOB_PATH_HTML = "wsb-report/latest.html"
 BLOB_PATH_META = "wsb-report/meta.json"
 DEFAULT_LOCAL_HTML = Path("data/reports/latest.html")
@@ -37,6 +39,33 @@ def load_latest_report() -> tuple[str | None, dict[str, Any] | None]:
     return _load_from_local_files()
 
 
+def _blob_access() -> str:
+    access = os.getenv("BLOB_ACCESS", "private").strip().lower()
+    return access if access in ("public", "private") else "private"
+
+
+def _parse_store_id(token: str) -> str:
+    """Extract store id from BLOB_READ_WRITE_TOKEN (vercel_blob_rw_<storeId>_...)."""
+    parts = token.split("_")
+    if len(parts) < 4:
+        raise ValueError("Invalid BLOB_READ_WRITE_TOKEN format")
+    store_id = parts[3]
+    if store_id.startswith("store_"):
+        store_id = store_id[len("store_") :]
+    return store_id
+
+
+def _blob_headers(token: str, *, extra: dict[str, str] | None = None) -> dict[str, str]:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "x-api-version": BLOB_API_VERSION,
+        "x-vercel-blob-store-id": _parse_store_id(token),
+    }
+    if extra:
+        headers.update(extra)
+    return headers
+
+
 def _save_to_vercel_blob(html: str, token: str, generated_at: str) -> dict[str, Any]:
     html_resp = _blob_put(token, BLOB_PATH_HTML, html.encode("utf-8"), "text/html")
     meta = {
@@ -53,20 +82,43 @@ def _save_to_vercel_blob(html: str, token: str, generated_at: str) -> dict[str, 
     return meta
 
 
+def _blob_content_url(token: str, pathname: str) -> str:
+    store_id = _parse_store_id(token)
+    return f"https://{store_id}.{_blob_access()}.blob.vercel-storage.com/{pathname}"
+
+
+def _blob_fetch(token: str, url_or_pathname: str) -> bytes:
+    """Fetch blob bytes. Private stores require Authorization on the CDN URL."""
+    url = (
+        url_or_pathname
+        if url_or_pathname.startswith("http")
+        else _blob_content_url(token, url_or_pathname)
+    )
+    response = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.content
+
+
 def _load_from_vercel_blob(token: str) -> tuple[str | None, dict[str, Any] | None]:
     try:
-        meta_bytes = _blob_get(token, BLOB_PATH_META)
+        meta_bytes = _blob_fetch(token, BLOB_PATH_META)
         meta = json.loads(meta_bytes.decode("utf-8"))
-    except (requests.HTTPError, json.JSONDecodeError, KeyError):
+    except (requests.HTTPError, json.JSONDecodeError, KeyError, ValueError):
         return None, None
 
-    html_url = meta.get("html_url")
-    if not html_url:
+    html_ref = meta.get("html_pathname") or meta.get("html_url")
+    if not html_ref:
         return None, meta
 
-    response = requests.get(html_url, timeout=60)
-    response.raise_for_status()
-    return response.text, meta
+    try:
+        html = _blob_fetch(token, html_ref).decode("utf-8")
+    except requests.HTTPError:
+        return None, meta
+    return html, meta
 
 
 def _save_to_local_files(html: str, generated_at: str) -> dict[str, Any]:
@@ -92,31 +144,26 @@ def _blob_put(
     data: bytes,
     content_type: str,
 ) -> dict[str, Any]:
+    query = urlencode({"pathname": pathname})
     response = requests.put(
-        f"https://blob.vercel-storage.com/?pathname={quote(pathname, safe='')}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "x-api-version": "10",
-            "x-content-type": content_type,
-            "x-add-random-suffix": "0",
-            "x-allow-overwrite": "1",
-            "x-access": "public",
-        },
+        f"{BLOB_API_URL}/?{query}",
+        headers=_blob_headers(
+            token,
+            extra={
+                "x-vercel-blob-access": _blob_access(),
+                "x-content-type": content_type,
+                "x-add-random-suffix": "0",
+                "x-allow-overwrite": "1",
+                "x-content-length": str(len(data)),
+            },
+        ),
         data=data,
         timeout=120,
     )
-    response.raise_for_status()
+    if not response.ok:
+        detail = response.text[:500] if response.text else response.reason
+        raise requests.HTTPError(
+            f"{response.status_code} {response.reason}: {detail}",
+            response=response,
+        )
     return response.json()
-
-
-def _blob_get(token: str, pathname: str) -> bytes:
-    response = requests.get(
-        f"https://blob.vercel-storage.com/?pathname={quote(pathname, safe='')}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "x-api-version": "10",
-        },
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.content

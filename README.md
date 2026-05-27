@@ -112,7 +112,7 @@ Visitors see a **pre-generated** report. A cron job rebuilds it once per day.
 ### 1. Create Vercel Blob storage
 
 In the Vercel project → **Storage** → **Create Blob** → connect to the project.  
-This sets `BLOB_READ_WRITE_TOKEN` automatically.
+This sets `BLOB_READ_WRITE_TOKEN` automatically. If the store is **Private**, set `BLOB_ACCESS=private` (default). Public stores use `BLOB_ACCESS=public`.
 
 ### 2. Environment variables
 
