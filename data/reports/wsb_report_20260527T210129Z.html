@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WSB Stock Monitor — wallstreetbets</title>
+  <style>
+    :root {
+      --bg: #0b0e11;
+      --card: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --bull: #3fb950;
+      --bear: #f85149;
+      --accent: #58a6ff;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+    header {
+      max-width: 960px;
+      margin: 0 auto 2rem;
+    }
+    h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
+    .meta { color: var(--muted); font-size: 0.95rem; }
+    .source-block {
+      max-width: 960px;
+      margin: 0 auto 2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .source-block h2 {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      font-size: 1.1rem;
+      background: #21262d;
+      border-bottom: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.65rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    .ticker { font-weight: 700; color: var(--accent); }
+    .bull { color: var(--bull); }
+    .bear { color: var(--bear); }
+    .stats { padding: 0.75rem 1.25rem; color: var(--muted); font-size: 0.85rem; }
+    footer {
+      max-width: 960px;
+      margin: 2rem auto 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>r/wallstreetbets — WSB Stock Monitor</h1>
+    <p class="meta">Generated 2026-05-27T21:01:29.518598+00:00 · 48h window</p>
+  </header>
+  
+  <section class="source-block">
+    <h2>REDDIT — Top 10 most mentioned (48h) — Reddit</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Ticker</th>
+          <th>Mentions</th>
+          <th>Bullish</th>
+          <th>Bearish</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>#1</td><td class="ticker">MU</td><td>mentions (last 48h): 22</td><td class="bull">58.3%</td><td class="bear">41.7%</td></tr>
+<tr><td>#2</td><td class="ticker">NVDA</td><td>mentions (last 48h): 8</td><td class="bull">56.3%</td><td class="bear">43.7%</td></tr>
+<tr><td>#3</td><td class="ticker">AMD</td><td>mentions (last 48h): 6</td><td class="bull">55.8%</td><td class="bear">44.2%</td></tr>
+<tr><td>#4</td><td class="ticker">CRSR</td><td>mentions (last 48h): 5</td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#5</td><td class="ticker">NOK</td><td>mentions (last 48h): 5</td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#6</td><td class="ticker">LUNR</td><td>mentions (last 48h): 5</td><td class="bull">85.9%</td><td class="bear">14.1%</td></tr>
+<tr><td>#7</td><td class="ticker">META</td><td>mentions (last 48h): 4</td><td class="bull">62.5%</td><td class="bear">37.5%</td></tr>
+<tr><td>#8</td><td class="ticker">MSFT</td><td>mentions (last 48h): 4</td><td class="bull">68.8%</td><td class="bear">31.2%</td></tr>
+<tr><td>#9</td><td class="ticker">GOOG</td><td>mentions (last 48h): 4</td><td class="bull">45.1%</td><td class="bear">54.9%</td></tr>
+<tr><td>#10</td><td class="ticker">MRVL</td><td>mentions (last 48h): 4</td><td class="bull">57.6%</td><td class="bear">42.4%</td></tr>
+      </tbody>
+    </table>
+    <p class="stats">Scanned 148 posts, 0 comments (reddit_public_json)</p>
+  </section>
+
+
+  <section class="source-block">
+    <h2>REDDIT — Top 10 fastest mention growth (48h) — Reddit</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Ticker</th>
+          <th>Mentions</th>
+          <th>Bullish</th>
+          <th>Bearish</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>#1</td><td class="ticker">MU</td><td>mention increase vs prior 48h: 21 <span class="muted">(+2100.0%)</span></td><td class="bull">58.3%</td><td class="bear">41.7%</td></tr>
+<tr><td>#2</td><td class="ticker">CRSR</td><td>mention increase vs prior 48h: 5 <span class="muted">(+500.0%)</span></td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#3</td><td class="ticker">LUNR</td><td>mention increase vs prior 48h: 5 <span class="muted">(+500.0%)</span></td><td class="bull">85.9%</td><td class="bear">14.1%</td></tr>
+<tr><td>#4</td><td class="ticker">NVDA</td><td>mention increase vs prior 48h: 5 <span class="muted">(+166.7%)</span></td><td class="bull">56.3%</td><td class="bear">43.7%</td></tr>
+<tr><td>#5</td><td class="ticker">RKLB</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">70.8%</td><td class="bear">29.2%</td></tr>
+<tr><td>#6</td><td class="ticker">MRVL</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">57.6%</td><td class="bear">42.4%</td></tr>
+<tr><td>#7</td><td class="ticker">GOOG</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">45.1%</td><td class="bear">54.9%</td></tr>
+<tr><td>#8</td><td class="ticker">META</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">62.5%</td><td class="bear">37.5%</td></tr>
+<tr><td>#9</td><td class="ticker">AVGO</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">43.8%</td><td class="bear">56.2%</td></tr>
+<tr><td>#10</td><td class="ticker">NOK</td><td>mention increase vs prior 48h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+      </tbody>
+    </table>
+    <p class="stats">Scanned 148 posts, 0 comments (reddit_public_json)</p>
+  </section>
+
+  <footer>WSB Stock Monitor</footer>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WSB Stock Monitor — wallstreetbets</title>
+  <style>
+    :root {
+      --bg: #0b0e11;
+      --card: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --bull: #3fb950;
+      --bear: #f85149;
+      --accent: #58a6ff;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    header { margin-bottom: 1.5rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
+    .meta { color: var(--muted); font-size: 0.95rem; }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      appearance: none;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: -1px;
+      padding: 0.65rem 1.25rem;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .panel-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0 0 1.25rem;
+    }
+    .source-block {
+      margin-bottom: 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .source-block h2 {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      font-size: 1.05rem;
+      background: #21262d;
+      border-bottom: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 0.65rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    tr:last-child td { border-bottom: none; }
+    .ticker { font-weight: 700; color: var(--accent); }
+    .bull { color: var(--bull); }
+    .bear { color: var(--bear); }
+    .muted { color: var(--muted); }
+    .stats { padding: 0.75rem 1.25rem; color: var(--muted); font-size: 0.85rem; }
+    .empty {
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      padding: 2rem;
+      text-align: center;
+    }
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>r/wallstreetbets — WSB Stock Monitor</h1>
+      <p class="meta">Generated 2026-05-27T21:15:11.510114+00:00 · 96h window</p>
+    </header>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" role="tab" data-tab="reddit" aria-controls="panel-reddit">Reddit</button>
+      <button type="button" class="tab-btn" role="tab" data-tab="gemini" aria-controls="panel-gemini">Gemini</button>
+    </nav>
+    
+    <div id="panel-reddit" class="tab-panel active" role="tabpanel">
+      <p class="panel-meta">Counts from r/wallstreetbets posts (public JSON or OAuth)</p>
+      <section class="source-block">
+        <h2>Top 10 most mentioned (96h) — Reddit</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Ticker</th>
+              <th>Mentions</th>
+              <th>Bullish</th>
+              <th>Bearish</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>#1</td><td class="ticker">MU</td><td>mentions (last 96h): 23</td><td class="bull">58.2%</td><td class="bear">41.8%</td></tr>
+<tr><td>#2</td><td class="ticker">NVDA</td><td>mentions (last 96h): 11</td><td class="bull">56.2%</td><td class="bear">43.8%</td></tr>
+<tr><td>#3</td><td class="ticker">AMD</td><td>mentions (last 96h): 10</td><td class="bull">53.5%</td><td class="bear">46.5%</td></tr>
+<tr><td>#4</td><td class="ticker">MSFT</td><td>mentions (last 96h): 7</td><td class="bull">65.7%</td><td class="bear">34.3%</td></tr>
+<tr><td>#5</td><td class="ticker">TLDR</td><td>mentions (last 96h): 7</td><td class="bull">68.1%</td><td class="bear">31.9%</td></tr>
+<tr><td>#6</td><td class="ticker">SNDK</td><td>mentions (last 96h): 6</td><td class="bull">48.0%</td><td class="bear">52.0%</td></tr>
+<tr><td>#7</td><td class="ticker">NOK</td><td>mentions (last 96h): 6</td><td class="bull">75.0%</td><td class="bear">25.0%</td></tr>
+<tr><td>#8</td><td class="ticker">CRSR</td><td>mentions (last 96h): 5</td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#9</td><td class="ticker">LUNR</td><td>mentions (last 96h): 5</td><td class="bull">85.9%</td><td class="bear">14.1%</td></tr>
+<tr><td>#10</td><td class="ticker">ASTS</td><td>mentions (last 96h): 4</td><td class="bull">70.3%</td><td class="bear">29.7%</td></tr>
+          </tbody>
+        </table>
+        <p class="stats">Scanned 302 posts, 0 comments (reddit_public_json)</p>
+      </section>
+
+      <section class="source-block">
+        <h2>Top 10 fastest mention growth (96h) — Reddit</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Ticker</th>
+              <th>Mentions</th>
+              <th>Bullish</th>
+              <th>Bearish</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>#1</td><td class="ticker">MU</td><td>mention increase vs prior 96h: 16 <span class="muted">(+228.6%)</span></td><td class="bull">58.2%</td><td class="bear">41.8%</td></tr>
+<tr><td>#2</td><td class="ticker">MSFT</td><td>mention increase vs prior 96h: 6 <span class="muted">(+600.0%)</span></td><td class="bull">65.7%</td><td class="bear">34.3%</td></tr>
+<tr><td>#3</td><td class="ticker">TLDR</td><td>mention increase vs prior 96h: 6 <span class="muted">(+600.0%)</span></td><td class="bull">68.1%</td><td class="bear">31.9%</td></tr>
+<tr><td>#4</td><td class="ticker">NOK</td><td>mention increase vs prior 96h: 5 <span class="muted">(+500.0%)</span></td><td class="bull">75.0%</td><td class="bear">25.0%</td></tr>
+<tr><td>#5</td><td class="ticker">CRSR</td><td>mention increase vs prior 96h: 5 <span class="muted">(+500.0%)</span></td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#6</td><td class="ticker">AVGO</td><td>mention increase vs prior 96h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">43.8%</td><td class="bear">56.2%</td></tr>
+<tr><td>#7</td><td class="ticker">MRVL</td><td>mention increase vs prior 96h: 4 <span class="muted">(+400.0%)</span></td><td class="bull">57.6%</td><td class="bear">42.4%</td></tr>
+<tr><td>#8</td><td class="ticker">SNDK</td><td>mention increase vs prior 96h: 4 <span class="muted">(+200.0%)</span></td><td class="bull">48.0%</td><td class="bear">52.0%</td></tr>
+<tr><td>#9</td><td class="ticker">TSLA</td><td>mention increase vs prior 96h: 3 <span class="muted">(+300.0%)</span></td><td class="bull">60.4%</td><td class="bear">39.6%</td></tr>
+<tr><td>#10</td><td class="ticker">LEAPS</td><td>mention increase vs prior 96h: 3 <span class="muted">(+300.0%)</span></td><td class="bull">58.9%</td><td class="bear">41.1%</td></tr>
+          </tbody>
+        </table>
+        <p class="stats">Scanned 302 posts, 0 comments (reddit_public_json)</p>
+      </section>
+    </div>
+
+    <div id="panel-gemini" class="tab-panel" role="tabpanel">
+      <p class="panel-meta">Model: gemini-2.5-flash · Google Search grounding enabled</p>
+      <section class="source-block">
+        <h2>Top 10 most mentioned (96h) — Gemini</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Ticker</th>
+              <th>Mentions</th>
+              <th>Bullish</th>
+              <th>Bearish</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>#1</td><td class="ticker">MU</td><td>estimated_mentions_96h: 4000</td><td class="bull">90.0%</td><td class="bear">10.0%</td></tr>
+<tr><td>#2</td><td class="ticker">NVDA</td><td>estimated_mentions_96h: 1800</td><td class="bull">60.0%</td><td class="bear">40.0%</td></tr>
+<tr><td>#3</td><td class="ticker">ASTS</td><td>estimated_mentions_96h: 1100</td><td class="bull">70.0%</td><td class="bear">30.0%</td></tr>
+<tr><td>#4</td><td class="ticker">PLTR</td><td>estimated_mentions_96h: 950</td><td class="bull">55.0%</td><td class="bear">45.0%</td></tr>
+<tr><td>#5</td><td class="ticker">AMD</td><td>estimated_mentions_96h: 900</td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#6</td><td class="ticker">SPY</td><td>estimated_mentions_96h: 800</td><td class="bull">50.0%</td><td class="bear">50.0%</td></tr>
+<tr><td>#7</td><td class="ticker">MSFT</td><td>estimated_mentions_96h: 700</td><td class="bull">60.0%</td><td class="bear">40.0%</td></tr>
+<tr><td>#8</td><td class="ticker">LUNR</td><td>estimated_mentions_96h: 600</td><td class="bull">60.0%</td><td class="bear">40.0%</td></tr>
+<tr><td>#9</td><td class="ticker">RKLB</td><td>estimated_mentions_96h: 500</td><td class="bull">90.0%</td><td class="bear">10.0%</td></tr>
+<tr><td>#10</td><td class="ticker">TSLA</td><td>estimated_mentions_96h: 400</td><td class="bull">65.0%</td><td class="bear">35.0%</td></tr>
+          </tbody>
+        </table>
+        
+      </section>
+
+      <section class="source-block">
+        <h2>Top 10 fastest mention growth (96h) — Gemini</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Ticker</th>
+              <th>Mentions</th>
+              <th>Bullish</th>
+              <th>Bearish</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>#1</td><td class="ticker">ZS</td><td>percent increase in mentions (last 24h): 2100.0</td><td class="bull">80.0%</td><td class="bear">20.0%</td></tr>
+<tr><td>#2</td><td class="ticker">AMD</td><td>percent increase in mentions (last 24h): 541.4</td><td class="bull">75.0%</td><td class="bear">25.0%</td></tr>
+<tr><td>#3</td><td class="ticker">MU</td><td>percent increase in mentions (last 24h): 475.7</td><td class="bull">90.0%</td><td class="bear">10.0%</td></tr>
+<tr><td>#4</td><td class="ticker">LUNR</td><td>percent increase in mentions (last 24h): 421.2</td><td class="bull">55.0%</td><td class="bear">45.0%</td></tr>
+<tr><td>#5</td><td class="ticker">NVDA</td><td>percent increase in mentions (last 24h): 129.6</td><td class="bull">65.0%</td><td class="bear">35.0%</td></tr>
+<tr><td>#6</td><td class="ticker">MSFT</td><td>percent increase in mentions (last 24h): 76.3</td><td class="bull">50.0%</td><td class="bear">50.0%</td></tr>
+<tr><td>#7</td><td class="ticker">PLTR</td><td>estimated increase in mentions (last 96h): 1500</td><td class="bull">28.0%</td><td class="bear">72.0%</td></tr>
+<tr><td>#8</td><td class="ticker">TSLA</td><td>estimated increase in mentions (last 96h): 1200</td><td class="bull">60.0%</td><td class="bear">40.0%</td></tr>
+<tr><td>#9</td><td class="ticker">AAPL</td><td>estimated increase in mentions (last 96h): 900</td><td class="bull">70.0%</td><td class="bear">30.0%</td></tr>
+<tr><td>#10</td><td class="ticker">SMCI</td><td>estimated increase in mentions (last 96h): 800</td><td class="bull">40.0%</td><td class="bear">60.0%</td></tr>
+          </tbody>
+        </table>
+        
+      </section>
+    </div>
+    <footer>WSB Stock Monitor</footer>
+  </div>
+  <script>
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + id).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
