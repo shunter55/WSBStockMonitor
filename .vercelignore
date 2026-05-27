@@ -1,0 +1,8 @@
+.venv/
+venv/
+wsbstockmonitor/
+data/reports/
+.env
+__pycache__/
+*.pyc
+.git/

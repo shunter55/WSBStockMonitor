@@ -6,21 +6,14 @@ import socketserver
 import sys
 import webbrowser
 from dataclasses import replace
-from datetime import datetime, timezone
 from pathlib import Path
 
-from wsb_monitor.client import create_gemini_client
 from wsb_monitor.config import AppSettings, load_settings
-from wsb_monitor.html_report import html_from_json_file
 from wsb_monitor.config import load_window_hours
+from wsb_monitor.html_report import html_from_json_file
 from wsb_monitor.prompts import gemini_queries
-from wsb_monitor.reddit import collect_wsb_data
-from wsb_monitor.report import (
-    build_gemini_section,
-    build_reddit_section,
-    print_summary,
-    write_report,
-)
+from wsb_monitor.report import print_summary, write_report
+from wsb_monitor.runner import build_report
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -96,61 +89,19 @@ def cmd_run(args: argparse.Namespace) -> int:
     elif args.gemini_only:
         settings = _with_only_gemini(settings)
 
-    sources: dict[str, dict] = {}
-    window_hours = settings.window_hours
-    window_label = f"{window_hours}h"
-
     if settings.reddit:
-        mode = settings.reddit.auth_mode
         print(
-            f"Scanning r/{settings.reddit.subreddit} via Reddit ({mode})...",
+            f"Scanning r/{settings.reddit.subreddit} via Reddit ({settings.reddit.auth_mode})...",
             flush=True,
         )
-        reddit_data = collect_wsb_data(settings.reddit)
-        sources["reddit"] = {
-            "sections": [
-                build_reddit_section(
-                    section_id="top_mentions",
-                    title=f"Top 10 most mentioned ({window_label}) — Reddit",
-                    parsed=reddit_data["top_mentions"],
-                    stats=reddit_data["stats"],
-                ),
-                build_reddit_section(
-                    section_id="mention_momentum",
-                    title=f"Top 10 fastest mention growth ({window_label}) — Reddit",
-                    parsed=reddit_data["mention_momentum"],
-                    stats=reddit_data["stats"],
-                ),
-            ],
-            "scan_stats": reddit_data["stats"],
-        }
-
     if settings.gemini:
-        client = create_gemini_client(settings.gemini)
-        gemini_sections = []
-        for section_id, title, query in gemini_queries(window_hours):
-            print(f"Querying Gemini ({settings.gemini.model}): {title}...", flush=True)
-            raw = client.query(query)
-            gemini_sections.append(
-                build_gemini_section(
-                    section_id=section_id,
-                    title=f"{title} — Gemini",
-                    query=query,
-                    raw_payload=raw,
-                )
-            )
-        sources["gemini"] = {
-            "model": settings.gemini.model,
-            "use_grounding": settings.gemini.use_grounding,
-            "sections": gemini_sections,
-        }
+        print(f"Querying Gemini ({settings.gemini.model})...", flush=True)
 
-    report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "subreddit": settings.reddit.subreddit if settings.reddit else "wallstreetbets",
-        "window_hours": window_hours,
-        "sources": sources,
-    }
+    report = build_report(
+        settings,
+        reddit_only=args.reddit_only,
+        gemini_only=args.gemini_only,
+    )
 
     json_path, html_path = write_report(settings.output_dir, report)
     print_summary(report)

@@ -1,0 +1,14 @@
+{
+  "installCommand": "pip install -r requirements.txt",
+  "functions": {
+    "api/run.py": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/run",
+      "schedule": "0 11 * * *"
+    }
+  ]
+}

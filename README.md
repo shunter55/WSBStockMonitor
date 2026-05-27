@@ -99,6 +99,48 @@ Reports are saved to `data/reports/`:
 - Counts mentions in the last 48h and compares to the prior 48h for momentum
 - Sentiment uses keyword scoring (`calls`, `puts`, `moon`, etc.) on text containing each ticker
 
+## Deploy on Vercel
+
+This repo includes a [Vercel](https://vercel.com) serverless setup:
+
+| Path | Purpose |
+|------|---------|
+| `/` | Landing page with links |
+| `/api/run` | Generates and returns the HTML report |
+| Cron `0 11 * * *` | Daily refresh (requires Vercel Pro) |
+
+### 1. Push to GitHub
+
+Connect the repo to Vercel (Import Project → your GitHub repo).
+
+### 2. Set environment variables
+
+In Vercel → **Settings → Environment Variables**, add the same keys as `.env`:
+
+- `REDDIT_USER_AGENT` (required for Reddit)
+- `GEMINI_API_KEY` (optional)
+- `WSB_WINDOW_HOURS`, `GEMINI_USE_GROUNDING`, etc.
+
+Do **not** commit `.env`.
+
+### 3. Deploy
+
+```bash
+npm i -g vercel
+vercel
+```
+
+Production URL example: `https://your-app.vercel.app/api/run`
+
+### Vercel limitations
+
+- **Timeouts:** Full Reddit scans (800+ posts) can take 15+ minutes locally. On Vercel, `/api/run` caps Reddit to **200 posts** unless you set `VERCEL_ALLOW_FULL_REDDIT_SCAN=true` and use a **Pro** plan with `maxDuration: 300` in `vercel.json`.
+- **No persistent disk:** Reports are generated per request; use the Pi + `latest.html` if you want files on disk.
+- **Cron:** Scheduled jobs need [Vercel Cron on a Pro team](https://vercel.com/docs/cron-jobs).
+- **Gemini-only** (`/api/run?gemini_only=1`) is the fastest option on serverless (~30–90s).
+
+**Recommended split:** Run heavy Reddit scraping on your **Raspberry Pi** (cron), and use Vercel only for hosting a static `public/latest.html` (commit or CI upload), or use Vercel for **Gemini-only** live reports.
+
 ## Raspberry Pi cron (daily)
 
 ```cron
@@ -122,4 +164,10 @@ wsb_monitor/
     sentiment.py   # Keyword sentiment
   client/
     gemini.py
+  runner.py        # Shared pipeline (CLI + Vercel)
+api/
+  run.py           # Vercel serverless handler
+public/
+  index.html       # Vercel landing page
+vercel.json
 ```
