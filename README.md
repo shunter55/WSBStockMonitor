@@ -106,7 +106,7 @@ This repo includes a [Vercel](https://vercel.com) serverless setup:
 | Path | Purpose |
 |------|---------|
 | `/` | Landing page with links |
-| `/api/run` | Generates and returns the HTML report |
+| `/api/run` | Generates and returns the HTML report (`api/run/index.py`) |
 | Cron `0 11 * * *` | Daily refresh (requires Vercel Pro) |
 
 ### 1. Push to GitHub

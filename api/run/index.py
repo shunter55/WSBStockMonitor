@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import os
+import sys
 import traceback
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+# Ensure project root is on path when Vercel runs from api/run/
+_ROOT = Path(__file__).resolve().parents[2]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from wsb_monitor.runner import generate_report_html
 

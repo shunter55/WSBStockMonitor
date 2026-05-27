@@ -1,7 +1,6 @@
 {
-  "installCommand": "pip install -r requirements.txt",
   "functions": {
-    "api/run.py": {
+    "api/**/*.py": {
       "maxDuration": 300
     }
   },
