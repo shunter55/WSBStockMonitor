@@ -106,7 +106,7 @@ This repo includes a [Vercel](https://vercel.com) serverless setup:
 | Path | Purpose |
 |------|---------|
 | `/` | Landing page with links |
-| `/api/run` | Generates and returns the HTML report (`api/run/index.py`) |
+| `/api/run` | Generates and returns the HTML report (`api/index.py` + FastAPI) |
 | Cron `0 11 * * *` | Daily refresh (requires Vercel Pro) |
 
 ### 1. Push to GitHub
@@ -134,7 +134,7 @@ Production URL example: `https://your-app.vercel.app/api/run`
 
 ### Vercel limitations
 
-- **Timeouts:** Full Reddit scans (800+ posts) can take 15+ minutes locally. On Vercel, `/api/run` caps Reddit to **200 posts** unless you set `VERCEL_ALLOW_FULL_REDDIT_SCAN=true` and use a **Pro** plan with `maxDuration: 300` in `vercel.json`.
+- **Timeouts:** Full Reddit scans (800+ posts) can take 15+ minutes locally. On Vercel, `/api/run` caps Reddit to **200 posts** unless you set `VERCEL_ALLOW_FULL_REDDIT_SCAN=true`. Increase function **Max Duration** in the Vercel project settings (Pro: up to 300s).
 - **No persistent disk:** Reports are generated per request; use the Pi + `latest.html` if you want files on disk.
 - **Cron:** Scheduled jobs need [Vercel Cron on a Pro team](https://vercel.com/docs/cron-jobs).
 - **Gemini-only** (`/api/run?gemini_only=1`) is the fastest option on serverless (~30–90s).
@@ -166,7 +166,7 @@ wsb_monitor/
     gemini.py
   runner.py        # Shared pipeline (CLI + Vercel)
 api/
-  run.py           # Vercel serverless handler
+  index.py         # FastAPI app (Vercel entrypoint)
 public/
   index.html       # Vercel landing page
 vercel.json
