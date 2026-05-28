@@ -1,16 +1,21 @@
 from __future__ import annotations
+# HTML report generation for WSB Stock Monitor
 
 import html
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-TAB_ORDER = ("gemini", "reddit")
-TAB_LABELS = {
-    "reddit": "Reddit",
-    "gemini": "Gemini",
-}
+
+def _format_generated_at(raw: str) -> str:
+    try:
+        dt = datetime.fromisoformat(raw)
+        tz_name = dt.strftime("%Z") or "UTC"
+        return html.escape(dt.strftime(f"%b %-d, %Y at %-I:%M %p {tz_name}"))
+    except (ValueError, TypeError):
+        return html.escape(str(raw))
 
 
 def write_html_report(report: dict[str, Any], path: Path) -> Path:
@@ -19,20 +24,16 @@ def write_html_report(report: dict[str, Any], path: Path) -> Path:
 
 
 def render_html(report: dict[str, Any]) -> str:
-    generated = html.escape(str(report.get("generated_at", "")))
+    generated = _format_generated_at(report.get("generated_at", ""))
     subreddit = html.escape(str(report.get("subreddit", "wallstreetbets")))
     window = html.escape(str(report.get("window_hours", 48)))
 
     sources = report.get("sources") or {}
     if not sources and report.get("sections"):
-        sources = {"report": {"sections": report["sections"]}}
+        sources = {"gemini": {"sections": report["sections"]}}
 
-    tab_ids = _ordered_tab_ids(sources)
-    tabs_nav = _render_tabs_nav(tab_ids)
-    tab_panels = "\n".join(
-        _render_tab_panel(tab_id, sources.get(tab_id, {}), is_active=(i == 0))
-        for i, tab_id in enumerate(tab_ids)
-    )
+    gemini_data = sources.get("gemini") or {}
+    content = _render_gemini_content(gemini_data)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -64,33 +65,6 @@ def render_html(report: dict[str, Any]) -> str:
     header {{ margin-bottom: 1.5rem; }}
     h1 {{ margin: 0 0 0.25rem; font-size: 1.75rem; }}
     .meta {{ color: var(--muted); font-size: 0.95rem; }}
-    .tabs {{
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0;
-    }}
-    .tab-btn {{
-      appearance: none;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: -1px;
-      padding: 0.65rem 1.25rem;
-      transition: color 0.15s, border-color 0.15s;
-    }}
-    .tab-btn:hover {{ color: var(--text); }}
-    .tab-btn.active {{
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }}
-    .tab-panel {{ display: none; }}
-    .tab-panel.active {{ display: block; }}
     .panel-meta {{
       color: var(--muted);
       font-size: 0.9rem;
@@ -155,81 +129,33 @@ def render_html(report: dict[str, Any]) -> str:
       <h1>r/{subreddit} — WSB Stock Monitor</h1>
       <p class="meta">Generated {generated} · {window}h window</p>
     </header>
-    <nav class="tabs" role="tablist">
-      {tabs_nav}
-    </nav>
-    {tab_panels}
+    {content}
     <footer>WSB Stock Monitor</footer>
   </div>
-  <script>
-    document.querySelectorAll('.tab-btn').forEach((btn) => {{
-      btn.addEventListener('click', () => {{
-        const id = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('panel-' + id).classList.add('active');
-      }});
-    }});
-  </script>
 </body>
 </html>
 """
 
 
-def _ordered_tab_ids(sources: dict[str, Any]) -> list[str]:
-    """Always show Reddit + Gemini tabs; append any other sources after."""
-    ids: list[str] = list(TAB_ORDER)
-    for name in sources:
-        if name not in ids:
-            ids.append(name)
-    return ids
-
-
-def _render_tabs_nav(tab_ids: list[str]) -> str:
-    buttons: list[str] = []
-    for i, tab_id in enumerate(tab_ids):
-        label = html.escape(TAB_LABELS.get(tab_id, tab_id.title()))
-        active = " active" if i == 0 else ""
-        buttons.append(
-            f'<button type="button" class="tab-btn{active}" role="tab" '
-            f'data-tab="{html.escape(tab_id)}" aria-controls="panel-{html.escape(tab_id)}">'
-            f"{label}</button>"
-        )
-    return "\n      ".join(buttons)
-
-
-def _render_tab_panel(tab_id: str, source_data: dict[str, Any], *, is_active: bool) -> str:
-    active_class = " active" if is_active else ""
+def _render_gemini_content(source_data: dict[str, Any]) -> str:
     sections = source_data.get("sections") or []
 
     meta_parts: list[str] = []
-    if tab_id == "gemini":
-        if model := source_data.get("model"):
-            meta_parts.append(f"Model: {html.escape(str(model))}")
-        if source_data.get("use_grounding"):
-            meta_parts.append("Google Search grounding enabled")
-    elif tab_id == "reddit":
-        meta_parts.append("Counts from r/wallstreetbets posts (public JSON or OAuth)")
+    if model := source_data.get("model"):
+        meta_parts.append(f"Model: {html.escape(str(model))}")
+    if source_data.get("use_grounding"):
+        meta_parts.append("Google Search grounding enabled")
 
     meta_html = ""
     if meta_parts:
-        meta_html = f'<p class="panel-meta">{" · ".join(meta_parts)}</p>'
+        meta_html = f'<p class="panel-meta">{" · ".join(meta_parts)}</p>\n    '
 
     if not sections:
-        content = (
-            f'<div class="empty">No {html.escape(TAB_LABELS.get(tab_id, tab_id))} '
-            f"data in this report. Run with both sources configured, or run "
-            f'<code>python -m wsb_monitor</code> without <code>--reddit-only</code> '
-            f"/ <code>--gemini-only</code>.</div>"
+        return (
+            f'{meta_html}<div class="empty">No Gemini data in this report.</div>'
         )
-    else:
-        content = meta_html + "\n".join(_render_section(section) for section in sections)
 
-    return f"""
-    <div id="panel-{html.escape(tab_id)}" class="tab-panel{active_class}" role="tabpanel">
-      {content}
-    </div>"""
+    return meta_html + "\n".join(_render_section(section) for section in sections)
 
 
 def _google_finance_url(ticker: str, exchange: str = "NASDAQ") -> str:
