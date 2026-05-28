@@ -1,4 +1,5 @@
 from __future__ import annotations
+# HTML report generation for WSB Stock Monitor
 
 import html
 import json
