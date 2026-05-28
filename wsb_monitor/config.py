@@ -34,6 +34,7 @@ class GeminiSettings:
     model: str
     use_grounding: bool
     window_hours: int
+    temperature: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -141,4 +142,5 @@ def _load_gemini_settings() -> GeminiSettings | None:
         model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         use_grounding=_env_bool("GEMINI_USE_GROUNDING"),
         window_hours=load_window_hours(),
+        temperature=float(os.getenv("GEMINI_TEMPERATURE", "0.0")),
     )

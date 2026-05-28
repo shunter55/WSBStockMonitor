@@ -45,6 +45,7 @@ class GeminiClient:
 
         config_kwargs: dict[str, Any] = {
             "system_instruction": system_instruction(self._settings.window_hours),
+            "temperature": self._settings.temperature,
         }
 
         if use_grounding:
