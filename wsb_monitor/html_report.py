@@ -1,12 +1,20 @@
 from __future__ import annotations
 # HTML report generation for WSB Stock Monitor
 
+import base64
 import html
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
+
+_ASSETS = Path(__file__).parent / "assets"
+
+
+def _load_image_b64(name: str) -> str:
+    data = (_ASSETS / name).read_bytes()
+    return f"data:image/png;base64,{base64.b64encode(data).decode()}"
 
 from wsb_monitor.parser import normalize_exchange
 
@@ -36,8 +44,11 @@ def render_html(report: dict[str, Any]) -> str:
     if not sources and report.get("sections"):
         sources = {"gemini": {"sections": report["sections"]}}
 
+    bull_uri = _load_image_b64("bull.png")
+    bear_uri = _load_image_b64("bear.png")
+
     gemini_data = sources.get("gemini") or {}
-    content = _render_gemini_content(gemini_data)
+    content = _render_gemini_content(gemini_data, bull_uri=bull_uri, bear_uri=bear_uri)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -107,6 +118,12 @@ def render_html(report: dict[str, Any]) -> str:
       text-decoration: none;
     }}
     .ticker a:hover {{ text-decoration: underline; }}
+    .sentiment-icon {{
+      height: 1em;
+      width: auto;
+      vertical-align: middle;
+      margin-right: 0.3em;
+    }}
     .bull {{ color: var(--bull); }}
     .bear {{ color: var(--bear); }}
     .muted {{ color: var(--muted); }}
@@ -141,7 +158,9 @@ def render_html(report: dict[str, Any]) -> str:
 """
 
 
-def _render_gemini_content(source_data: dict[str, Any]) -> str:
+def _render_gemini_content(
+    source_data: dict[str, Any], *, bull_uri: str, bear_uri: str
+) -> str:
     sections = source_data.get("sections") or []
 
     meta_parts: list[str] = []
@@ -155,11 +174,12 @@ def _render_gemini_content(source_data: dict[str, Any]) -> str:
         meta_html = f'<p class="panel-meta">{" · ".join(meta_parts)}</p>\n    '
 
     if not sections:
-        return (
-            f'{meta_html}<div class="empty">No Gemini data in this report.</div>'
-        )
+        return f'{meta_html}<div class="empty">No Gemini data in this report.</div>'
 
-    return meta_html + "\n".join(_render_section(section) for section in sections)
+    return meta_html + "\n".join(
+        _render_section(section, bull_uri=bull_uri, bear_uri=bear_uri)
+        for section in sections
+    )
 
 
 def _google_finance_url(ticker: str, exchange: str | None = None) -> str:
@@ -184,23 +204,26 @@ def _format_mentions_cell(stock: dict[str, Any]) -> str:
     return "—"
 
 
-def _render_ticker_cell(stock: dict[str, Any]) -> str:
+def _render_ticker_cell(stock: dict[str, Any], *, icon_uri: str | None = None) -> str:
     symbol = str(stock.get("ticker", "?")).strip().upper()
     label = html.escape(symbol or "?")
+    icon_html = f'<img class="sentiment-icon" src="{icon_uri}" alt="">' if icon_uri else ""
     if not symbol or symbol == "?":
-        return f'<td class="ticker">{label}</td>'
+        return f'<td class="ticker">{icon_html}{label}</td>'
     url = html.escape(
         _google_finance_url(symbol, stock.get("exchange")),
         quote=True,
     )
     return (
         f'<td class="ticker">'
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
+        f'{icon_html}<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
         f"</td>"
     )
 
 
-def _render_section(section: dict[str, Any]) -> str:
+def _render_section(
+    section: dict[str, Any], *, bull_uri: str, bear_uri: str
+) -> str:
     title = html.escape(section.get("title", "Section"))
     stocks = section.get("parsed", {}).get("stocks") or []
     rows: list[str] = []
@@ -208,12 +231,24 @@ def _render_section(section: dict[str, Any]) -> str:
     for index, stock in enumerate(stocks):
         rank = stock.get("rank", index + 1)
         mentions = html.escape(_format_mentions_cell(stock))
-        bull = html.escape(str(stock.get("bullish_pct", "?")))
-        bear = html.escape(str(stock.get("bearish_pct", "?")))
+        bull_pct = stock.get("bullish_pct")
+        bear_pct = stock.get("bearish_pct")
+        bull = html.escape(str(bull_pct if bull_pct is not None else "?"))
+        bear = html.escape(str(bear_pct if bear_pct is not None else "?"))
+
+        try:
+            icon_uri: str | None = (
+                bull_uri if float(bull_pct) > float(bear_pct)
+                else bear_uri if float(bear_pct) > float(bull_pct)
+                else None
+            )
+        except (TypeError, ValueError):
+            icon_uri = None
+
         rows.append(
             f"<tr>"
             f"<td>#{rank}</td>"
-            f"{_render_ticker_cell(stock)}"
+            f"{_render_ticker_cell(stock, icon_uri=icon_uri)}"
             f"<td>{mentions}</td>"
             f'<td class="bull">{bull}%</td>'
             f'<td class="bear">{bear}%</td>'
