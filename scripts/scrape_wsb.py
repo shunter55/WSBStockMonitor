@@ -16,7 +16,34 @@ REDDIT_BASE = "https://www.reddit.com"
 USER_AGENT = "wsbstockmonitor-scraper:0.1 (poc)"
 
 
-def fetch_posts(subreddit: str, limit: int) -> list[dict]:
+def fetch_top_comments(session: requests.Session, permalink: str, limit: int) -> list[dict]:
+    url = f"{REDDIT_BASE}{permalink}.json"
+    while True:
+        response = session.get(url, params={"limit": limit, "depth": 1, "raw_json": 1}, timeout=30)
+        if response.status_code == 429:
+            wait = int(response.headers.get("Retry-After", 10))
+            print(f"Rate limited (comments) — waiting {wait}s...", file=sys.stderr)
+            time.sleep(wait)
+            continue
+        response.raise_for_status()
+        break
+
+    data = response.json()
+    comments = []
+    for child in data[1]["data"]["children"]:
+        c = child.get("data", {})
+        if child.get("kind") != "t1" or not c.get("body"):
+            continue
+        comments.append({
+            "body": c.get("body", ""),
+            "score": c.get("score", 0),
+            "created_utc": int(c.get("created_utc", 0)),
+        })
+    comments.sort(key=lambda x: x["score"], reverse=True)
+    return comments[:limit]
+
+
+def fetch_posts(subreddit: str, limit: int, top_comments: int = 0) -> list[dict]:
     posts: list[dict] = []
     after: str | None = None
     session = requests.Session()
@@ -52,8 +79,9 @@ def fetch_posts(subreddit: str, limit: int) -> list[dict]:
             except ZeroDivisionError:
                 est_downvotes = 0
 
-            posts.append({
+            post: dict = {
                 "title": p.get("title", ""),
+                "body": p.get("selftext", ""),
                 "score": score,
                 "upvote_ratio": upvote_ratio,
                 "estimated_downvotes": est_downvotes,
@@ -61,7 +89,11 @@ def fetch_posts(subreddit: str, limit: int) -> list[dict]:
                 "created_utc": int(p.get("created_utc", 0)),
                 "permalink": p.get("permalink", ""),
                 "url": p.get("url", ""),
-            })
+            }
+            if top_comments > 0:
+                post["top_comments"] = fetch_top_comments(session, p["permalink"], top_comments)
+                time.sleep(0.5)
+            posts.append(post)
 
         after = data["data"].get("after")
         if not after:
@@ -88,11 +120,14 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=25, help="Number of posts to fetch (default: 25)")
     parser.add_argument("--subreddit", default="wallstreetbets")
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).parent / "output")
+    parser.add_argument("--top-comments", type=int, default=0, help="Top N comments to fetch per post (default: 0, slower)")
     parser.add_argument("--no-save", action="store_true", help="Skip writing JSON file")
     args = parser.parse_args()
 
     print(f"Fetching {args.limit} posts from r/{args.subreddit}...", file=sys.stderr)
-    posts = fetch_posts(args.subreddit, args.limit)
+    if args.top_comments:
+        print(f"Fetching top {args.top_comments} comments per post (1 extra request each)...", file=sys.stderr)
+    posts = fetch_posts(args.subreddit, args.limit, top_comments=args.top_comments)
     print(f"Got {len(posts)} posts.", file=sys.stderr)
 
     print_table(posts)
