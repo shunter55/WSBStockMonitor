@@ -117,6 +117,10 @@ def normalize_stock(
     if ticker is not None:
         out["ticker"] = str(ticker).upper().strip().lstrip("$")
 
+    exchange = stock.get("exchange") or stock.get("market") or stock.get("listing_exchange")
+    if exchange is not None:
+        out["exchange"] = normalize_exchange(str(exchange))
+
     value = stock.get("mention_value")
     if value is None:
         value = _first_present(
@@ -173,6 +177,29 @@ def _coerce_int(*values: Any) -> int | None:
         except (TypeError, ValueError):
             continue
     return None
+
+
+_EXCHANGE_ALIASES: dict[str, str] = {
+    "NASDAQ": "NASDAQ",
+    "NYSE": "NYSE",
+    "NYSE ARCA": "NYSEARCA",
+    "ARCA": "NYSEARCA",
+    "NYSEARCA": "NYSEARCA",
+    "AMEX": "AMEX",
+    "NYSE AMERICAN": "AMEX",
+    "NYSEAMERICAN": "AMEX",
+    "OTC": "OTCMKTS",
+    "OTCBB": "OTCMKTS",
+    "OTCMKTS": "OTCMKTS",
+    "PINK": "OTCMKTS",
+    "BATS": "BATS",
+    "CBOE": "CBOE",
+}
+
+
+def normalize_exchange(exchange: str) -> str:
+    key = exchange.strip().upper().replace(".", "")
+    return _EXCHANGE_ALIASES.get(key, key)
 
 
 def _coerce_number(value: Any) -> int | float:

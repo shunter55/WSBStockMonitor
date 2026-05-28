@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+from wsb_monitor.parser import normalize_exchange
+
+DEFAULT_EXCHANGE = "NASDAQ"
+
 
 def _format_generated_at(raw: str) -> str:
     try:
@@ -158,9 +162,10 @@ def _render_gemini_content(source_data: dict[str, Any]) -> str:
     return meta_html + "\n".join(_render_section(section) for section in sections)
 
 
-def _google_finance_url(ticker: str, exchange: str = "NASDAQ") -> str:
+def _google_finance_url(ticker: str, exchange: str | None = None) -> str:
     symbol = ticker.strip().upper()
-    return f"https://www.google.com/finance/beta/quote/{quote(symbol)}:{exchange}"
+    suffix = normalize_exchange(exchange or DEFAULT_EXCHANGE)
+    return f"https://www.google.com/finance/beta/quote/{quote(symbol)}:{suffix}"
 
 
 def _format_mentions_cell(stock: dict[str, Any]) -> str:
@@ -179,12 +184,15 @@ def _format_mentions_cell(stock: dict[str, Any]) -> str:
     return "—"
 
 
-def _render_ticker_cell(ticker_raw: str) -> str:
-    symbol = str(ticker_raw).strip().upper()
+def _render_ticker_cell(stock: dict[str, Any]) -> str:
+    symbol = str(stock.get("ticker", "?")).strip().upper()
     label = html.escape(symbol or "?")
     if not symbol or symbol == "?":
         return f'<td class="ticker">{label}</td>'
-    url = html.escape(_google_finance_url(symbol), quote=True)
+    url = html.escape(
+        _google_finance_url(symbol, stock.get("exchange")),
+        quote=True,
+    )
     return (
         f'<td class="ticker">'
         f'<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
@@ -205,7 +213,7 @@ def _render_section(section: dict[str, Any]) -> str:
         rows.append(
             f"<tr>"
             f"<td>#{rank}</td>"
-            f"{_render_ticker_cell(str(stock.get('ticker', '?')))}"
+            f"{_render_ticker_cell(stock)}"
             f"<td>{mentions}</td>"
             f'<td class="bull">{bull}%</td>'
             f'<td class="bear">{bear}%</td>'

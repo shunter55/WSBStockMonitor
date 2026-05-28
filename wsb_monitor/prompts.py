@@ -10,6 +10,13 @@ STOCKS_RESPONSE_SCHEMA: dict = {
                 "properties": {
                     "rank": {"type": "integer"},
                     "ticker": {"type": "string"},
+                    "exchange": {
+                        "type": "string",
+                        "description": (
+                            "Google Finance exchange code, e.g. NASDAQ, NYSE, "
+                            "NYSEARCA, AMEX, OTCMKTS"
+                        ),
+                    },
                     "company_name": {"type": "string"},
                     "mention_metric": {"type": "string"},
                     "mention_value": {"type": "number"},
@@ -20,6 +27,7 @@ STOCKS_RESPONSE_SCHEMA: dict = {
                 "required": [
                     "rank",
                     "ticker",
+                    "exchange",
                     "mention_metric",
                     "mention_value",
                     "bullish_pct",
@@ -54,7 +62,9 @@ def system_instruction(window_hours: int) -> str:
     return f"""You are a financial social-media analyst focused on Reddit r/wallstreetbets.
 Use recent web and Reddit discussion signals when available. Prefer verifiable, current sources.
 For each stock, estimate mention counts or growth from the last {hours} and split community tone
-into bullish_pct and bearish_pct (should sum to ~100). If data is uncertain, say so in sentiment_notes.
+into bullish_pct and bearish_pct (should sum to ~100). Include exchange using Google Finance codes
+(NASDAQ, NYSE, NYSEARCA, AMEX, OTCMKTS, etc.) so ticker links resolve correctly. If data is
+uncertain, say so in sentiment_notes.
 """
 
 
@@ -82,6 +92,7 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
     {
       "rank": 1,
       "ticker": "GME",
+      "exchange": "NYSE",
       "company_name": "",
       "mention_metric": "...",
       "mention_value": 0,
@@ -104,6 +115,7 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
       {
         "rank": 1,
         "ticker": "GME",
+        "exchange": "NYSE",
         "mention_metric": "estimated mentions (96h)",
         "mention_value": 1200,
         "bullish_pct": 55.0,
@@ -118,6 +130,7 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
       {
         "rank": 1,
         "ticker": "GME",
+        "exchange": "NYSE",
         "mention_metric": "mention increase vs prior 96h",
         "mention_value": 400,
         "bullish_pct": 60.0,
@@ -128,7 +141,7 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
     "as_of": "ISO-8601 timestamp"
   }
 }
-Each stocks array must have exactly 10 items with rank (1-10), mention_metric, and mention_value.
+Each stocks array must have exactly 10 items with rank (1-10), exchange, mention_metric, and mention_value.
 """.strip()
 
 
