@@ -158,6 +158,82 @@ Then open `https://your-app.vercel.app/` — everyone sees that cached report un
 
 Use `--reddit-only` on the Pi for reliable counts without Gemini API usage.
 
+## Scripts
+
+Standalone scripts in `scripts/` for data collection and analysis. They run independently of the main app — no API keys or environment setup needed unless noted.
+
+### `scripts/scrape_wsb.py` — Reddit scraper (no API key)
+
+Fetches the latest posts from r/wallstreetbets directly via Reddit's public JSON endpoint. No Reddit account, OAuth, or API key required.
+
+**Basic usage**
+
+```bash
+python3 scripts/scrape_wsb.py
+```
+
+Prints a table of the 25 most recent posts and saves a JSON file to `scripts/output/`.
+
+**Options**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--limit N` | `25` | Number of posts to fetch |
+| `--subreddit NAME` | `wallstreetbets` | Subreddit to scrape |
+| `--top-comments N` | `0` | Fetch top N comments per post (one extra request per post — slower) |
+| `--output-dir PATH` | `scripts/output/` | Where to write the JSON file |
+| `--no-save` | off | Print only, skip writing JSON |
+
+**Examples**
+
+```bash
+# Fetch 100 posts
+python3 scripts/scrape_wsb.py --limit 100
+
+# Fetch 50 posts with top 5 comments each
+python3 scripts/scrape_wsb.py --limit 50 --top-comments 5
+
+# Different subreddit, no file output
+python3 scripts/scrape_wsb.py --subreddit stocks --limit 25 --no-save
+```
+
+**Output JSON shape**
+
+```json
+{
+  "scraped_at": "2026-05-28T02:54:59+00:00",
+  "subreddit": "wallstreetbets",
+  "posts_fetched": 25,
+  "posts": [
+    {
+      "title": "$DELL wins 9.7B government contract",
+      "body": "I saw other guy posted MSFT won but news says DELL",
+      "score": 510,
+      "upvote_ratio": 0.97,
+      "estimated_downvotes": 16,
+      "num_comments": 74,
+      "created_utc": 1779918743,
+      "permalink": "/r/wallstreetbets/comments/...",
+      "url": "https://...",
+      "top_comments": [
+        {
+          "body": "Comment text here",
+          "score": 120,
+          "created_utc": 1779919000
+        }
+      ]
+    }
+  ]
+}
+```
+
+> `top_comments` is only present when `--top-comments N` is set.  
+> `estimated_downvotes` is calculated from `score` and `upvote_ratio` — Reddit hides exact downvote counts.
+
+Output files are saved to `scripts/output/wsb_scrape_<timestamp>.json` and are gitignored.
+
+---
+
 ## Project layout
 
 ```
