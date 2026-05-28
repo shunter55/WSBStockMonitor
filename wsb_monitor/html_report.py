@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -13,13 +12,13 @@ from wsb_monitor.parser import normalize_exchange
 DEFAULT_EXCHANGE = "NASDAQ"
 
 
-def _format_generated_at(raw: str) -> str:
-    try:
-        dt = datetime.fromisoformat(raw)
-        tz_name = dt.strftime("%Z") or "UTC"
-        return html.escape(dt.strftime(f"%b %-d, %Y at %-I:%M %p {tz_name}"))
-    except (ValueError, TypeError):
-        return html.escape(str(raw))
+def _generated_at_markup(raw: str) -> str:
+    """ISO timestamp in datetime=; browser script formats to local time."""
+    iso = str(raw or "").strip()
+    if not iso:
+        return html.escape("unknown")
+    escaped = html.escape(iso)
+    return f'<time id="report-generated-at" datetime="{escaped}">{escaped}</time>'
 
 
 def write_html_report(report: dict[str, Any], path: Path) -> Path:
@@ -28,7 +27,7 @@ def write_html_report(report: dict[str, Any], path: Path) -> Path:
 
 
 def render_html(report: dict[str, Any]) -> str:
-    generated = _format_generated_at(report.get("generated_at", ""))
+    generated = _generated_at_markup(report.get("generated_at", ""))
     subreddit = html.escape(str(report.get("subreddit", "wallstreetbets")))
     window = html.escape(str(report.get("window_hours", 48)))
 
@@ -136,6 +135,18 @@ def render_html(report: dict[str, Any]) -> str:
     {content}
     <footer>WSB Stock Monitor</footer>
   </div>
+  <script>
+    (function () {{
+      const el = document.getElementById("report-generated-at");
+      if (!el || !el.dateTime) return;
+      const date = new Date(el.dateTime);
+      if (Number.isNaN(date.getTime())) return;
+      el.textContent = new Intl.DateTimeFormat(undefined, {{
+        dateStyle: "medium",
+        timeStyle: "short",
+      }}).format(date);
+    }})();
+  </script>
 </body>
 </html>
 """
