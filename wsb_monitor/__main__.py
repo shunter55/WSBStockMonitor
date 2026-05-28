@@ -12,7 +12,6 @@ from wsb_monitor.config import AppSettings, load_settings
 from wsb_monitor.config import load_window_hours
 from wsb_monitor.html_report import html_from_json_file
 from wsb_monitor.prompts import gemini_combined_query
-from wsb_monitor.html_report import render_html
 from wsb_monitor.report import print_summary, write_report
 from wsb_monitor.report_cache import save_latest_report
 from wsb_monitor.runner import build_report
@@ -105,7 +104,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
 
     json_path, html_path = write_report(settings.output_dir, report)
-    save_latest_report(render_html(report), generated_at=report["generated_at"])
+    save_latest_report(report)
     print_summary(report)
     print(f"\nJSON report: {json_path}")
     print(f"HTML report: {html_path}")
