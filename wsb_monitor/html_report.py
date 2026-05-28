@@ -9,16 +9,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-_ASSETS = Path(__file__).parent / "assets"
-
-
-def _load_image_b64(name: str) -> str:
-    data = (_ASSETS / name).read_bytes()
-    return f"data:image/png;base64,{base64.b64encode(data).decode()}"
-
 from wsb_monitor.parser import normalize_exchange
 
 DEFAULT_EXCHANGE = "NASDAQ"
+_ASSETS = Path(__file__).parent / "assets"
+_PUBLIC = Path(__file__).parent.parent / "public"
+
+
+def _b64_data_uri(path: Path, mime: str) -> str:
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
 def _format_generated_at(raw: str) -> str:
@@ -40,15 +39,16 @@ def render_html(report: dict[str, Any]) -> str:
     subreddit = html.escape(str(report.get("subreddit", "wallstreetbets")))
     window = html.escape(str(report.get("window_hours", 48)))
 
+    favicon_uri = _b64_data_uri(_PUBLIC / "favicon.ico", "image/x-icon")
+    bull_uri = _b64_data_uri(_ASSETS / "bull.png", "image/png")
+    bear_uri = _b64_data_uri(_ASSETS / "bear.png", "image/png")
+
     sources = report.get("sources") or {}
     if not sources and report.get("sections"):
         sources = {"gemini": {"sections": report["sections"]}}
 
-    bull_uri = _load_image_b64("bull.png")
-    bear_uri = _load_image_b64("bear.png")
-
     gemini_data = sources.get("gemini") or {}
-    content = _render_gemini_content(gemini_data, bull_uri=bull_uri, bear_uri=bear_uri)
+    content = _render_gemini_content(gemini_data)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -56,6 +56,7 @@ def render_html(report: dict[str, Any]) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WSB Stock Monitor — {subreddit}</title>
+  <link rel="icon" href="{favicon_uri}">
   <style>
     :root {{
       --bg: #0b0e11;
@@ -77,9 +78,17 @@ def render_html(report: dict[str, Any]) -> str:
       padding: 1.5rem;
     }}
     .wrap {{ max-width: 960px; margin: 0 auto; }}
-    header {{ margin-bottom: 1.5rem; }}
+    header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
+    }}
+    .header-text {{ flex: 1; }}
     h1 {{ margin: 0 0 0.25rem; font-size: 1.75rem; }}
     .meta {{ color: var(--muted); font-size: 0.95rem; }}
+    .header-icons {{ display: flex; align-items: flex-end; gap: 0; }}
+    .header-icons img {{ height: 80px; width: auto; }}
     .panel-meta {{
       color: var(--muted);
       font-size: 0.9rem;
@@ -118,12 +127,6 @@ def render_html(report: dict[str, Any]) -> str:
       text-decoration: none;
     }}
     .ticker a:hover {{ text-decoration: underline; }}
-    .sentiment-icon {{
-      height: 1em;
-      width: auto;
-      vertical-align: middle;
-      margin-right: 0.3em;
-    }}
     .bull {{ color: var(--bull); }}
     .bear {{ color: var(--bear); }}
     .muted {{ color: var(--muted); }}
@@ -147,8 +150,14 @@ def render_html(report: dict[str, Any]) -> str:
 <body>
   <div class="wrap">
     <header>
-      <h1>r/{subreddit} — WSB Stock Monitor</h1>
-      <p class="meta">Generated {generated} · {window}h window</p>
+      <div class="header-text">
+        <h1>r/{subreddit} — WSB Stock Monitor</h1>
+        <p class="meta">Generated {generated} · {window}h window</p>
+      </div>
+      <div class="header-icons">
+        <img src="{bear_uri}" alt="bear">
+        <img src="{bull_uri}" alt="bull">
+      </div>
     </header>
     {content}
     <footer>WSB Stock Monitor</footer>
@@ -158,9 +167,7 @@ def render_html(report: dict[str, Any]) -> str:
 """
 
 
-def _render_gemini_content(
-    source_data: dict[str, Any], *, bull_uri: str, bear_uri: str
-) -> str:
+def _render_gemini_content(source_data: dict[str, Any]) -> str:
     sections = source_data.get("sections") or []
 
     meta_parts: list[str] = []
@@ -176,10 +183,7 @@ def _render_gemini_content(
     if not sections:
         return f'{meta_html}<div class="empty">No Gemini data in this report.</div>'
 
-    return meta_html + "\n".join(
-        _render_section(section, bull_uri=bull_uri, bear_uri=bear_uri)
-        for section in sections
-    )
+    return meta_html + "\n".join(_render_section(section) for section in sections)
 
 
 def _google_finance_url(ticker: str, exchange: str | None = None) -> str:
@@ -204,26 +208,23 @@ def _format_mentions_cell(stock: dict[str, Any]) -> str:
     return "—"
 
 
-def _render_ticker_cell(stock: dict[str, Any], *, icon_uri: str | None = None) -> str:
+def _render_ticker_cell(stock: dict[str, Any]) -> str:
     symbol = str(stock.get("ticker", "?")).strip().upper()
     label = html.escape(symbol or "?")
-    icon_html = f'<img class="sentiment-icon" src="{icon_uri}" alt="">' if icon_uri else ""
     if not symbol or symbol == "?":
-        return f'<td class="ticker">{icon_html}{label}</td>'
+        return f'<td class="ticker">{label}</td>'
     url = html.escape(
         _google_finance_url(symbol, stock.get("exchange")),
         quote=True,
     )
     return (
         f'<td class="ticker">'
-        f'{icon_html}<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
+        f'<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
         f"</td>"
     )
 
 
-def _render_section(
-    section: dict[str, Any], *, bull_uri: str, bear_uri: str
-) -> str:
+def _render_section(section: dict[str, Any]) -> str:
     title = html.escape(section.get("title", "Section"))
     stocks = section.get("parsed", {}).get("stocks") or []
     rows: list[str] = []
@@ -235,20 +236,10 @@ def _render_section(
         bear_pct = stock.get("bearish_pct")
         bull = html.escape(str(bull_pct if bull_pct is not None else "?"))
         bear = html.escape(str(bear_pct if bear_pct is not None else "?"))
-
-        try:
-            icon_uri: str | None = (
-                bull_uri if float(bull_pct) > float(bear_pct)
-                else bear_uri if float(bear_pct) > float(bull_pct)
-                else None
-            )
-        except (TypeError, ValueError):
-            icon_uri = None
-
         rows.append(
             f"<tr>"
             f"<td>#{rank}</td>"
-            f"{_render_ticker_cell(stock, icon_uri=icon_uri)}"
+            f"{_render_ticker_cell(stock)}"
             f"<td>{mentions}</td>"
             f'<td class="bull">{bull}%</td>'
             f'<td class="bear">{bear}%</td>'
