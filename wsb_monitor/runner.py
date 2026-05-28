@@ -78,36 +78,27 @@ def build_report(
     }
 
 
-def generate_report_html(
-    *,
-    reddit_only: bool = False,
-    gemini_only: bool = False,
-) -> str:
-    settings = load_settings(
-        require_reddit=reddit_only,
-        require_gemini=gemini_only,
-    )
-    report = build_report(
-        settings,
-        reddit_only=reddit_only,
-        gemini_only=gemini_only,
-    )
-    return render_html(report)
-
-
 def refresh_cached_report(
     *,
     reddit_only: bool = False,
     gemini_only: bool = False,
 ) -> dict[str, Any]:
-    """Generate a new report and save it as the cached 'latest' copy."""
-    html = generate_report_html(reddit_only=reddit_only, gemini_only=gemini_only)
-    meta = save_latest_report(html)
+    """Fetch fresh data, save report JSON to cache. HTML is rendered on demand."""
+    settings = load_settings(
+        require_reddit=reddit_only,
+        require_gemini=gemini_only,
+    )
+    report = build_report(settings, reddit_only=reddit_only, gemini_only=gemini_only)
+    meta = save_latest_report(report)
     return {"ok": True, "meta": meta}
 
 
 def get_cached_report_html() -> tuple[str | None, dict[str, Any] | None]:
-    return load_latest_report()
+    """Load cached report JSON and render HTML on the fly."""
+    report, meta = load_latest_report()
+    if report is None:
+        return None, meta
+    return render_html(report), meta
 
 
 def _with_only_reddit(settings: AppSettings) -> AppSettings:
