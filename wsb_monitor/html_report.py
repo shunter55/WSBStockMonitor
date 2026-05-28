@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -13,13 +14,22 @@ TAB_LABELS = {
 }
 
 
+def _format_generated_at(raw: str) -> str:
+    try:
+        dt = datetime.fromisoformat(raw)
+        tz_name = dt.strftime("%Z") or "UTC"
+        return html.escape(dt.strftime(f"%b %-d, %Y at %-I:%M %p {tz_name}"))
+    except (ValueError, TypeError):
+        return html.escape(str(raw))
+
+
 def write_html_report(report: dict[str, Any], path: Path) -> Path:
     path.write_text(render_html(report), encoding="utf-8")
     return path
 
 
 def render_html(report: dict[str, Any]) -> str:
-    generated = html.escape(str(report.get("generated_at", "")))
+    generated = _format_generated_at(report.get("generated_at", ""))
     subreddit = html.escape(str(report.get("subreddit", "wallstreetbets")))
     window = html.escape(str(report.get("window_hours", 48)))
 
