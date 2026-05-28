@@ -12,7 +12,6 @@ from wsb_monitor.parser import normalize_exchange
 
 DEFAULT_EXCHANGE = "NASDAQ"
 _ASSETS = Path(__file__).parent / "assets"
-_PUBLIC = Path(__file__).parent.parent / "public"
 
 
 def _b64_data_uri(path: Path, mime: str) -> str:
@@ -38,7 +37,7 @@ def render_html(report: dict[str, Any]) -> str:
     subreddit = html.escape(str(report.get("subreddit", "wallstreetbets")))
     window = html.escape(str(report.get("window_hours", 48)))
 
-    favicon_uri = _b64_data_uri(_PUBLIC / "favicon.ico", "image/x-icon")
+    favicon_uri = _b64_data_uri(_ASSETS / "favicon.ico", "image/x-icon")
     bull_uri = _b64_data_uri(_ASSETS / "bull.png", "image/png")
     bear_uri = _b64_data_uri(_ASSETS / "bear.png", "image/png")
 
