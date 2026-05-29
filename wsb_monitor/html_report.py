@@ -127,6 +127,8 @@ def render_html(report: dict[str, Any]) -> str:
     .ticker a:hover {{ text-decoration: underline; }}
     .bull {{ color: var(--bull); }}
     .bear {{ color: var(--bear); }}
+    .confidence {{ font-weight: 600; color: var(--accent); }}
+    .summary {{ color: var(--muted); font-size: 0.9rem; max-width: 28rem; }}
     .muted {{ color: var(--muted); }}
     .stats {{ padding: 0.75rem 1.25rem; color: var(--muted); font-size: 0.85rem; }}
     .empty {{
@@ -235,6 +237,12 @@ def _render_ticker_cell(stock: dict[str, Any]) -> str:
 
 
 def _render_section(section: dict[str, Any]) -> str:
+    if section.get("id") == "two_week_outlook":
+        return _render_outlook_section(section)
+    return _render_mentions_section(section)
+
+
+def _render_mentions_section(section: dict[str, Any]) -> str:
     title = html.escape(section.get("title", "Section"))
     stocks = section.get("parsed", {}).get("stocks") or []
     rows: list[str] = []
@@ -257,28 +265,65 @@ def _render_section(section: dict[str, Any]) -> str:
         )
 
     table_body = "\n".join(rows) if rows else '<tr><td colspan="5">No tickers found</td></tr>'
+    return _wrap_section_table(
+        title,
+        headers=("Rank", "Ticker", "Mentions", "Bullish", "Bearish"),
+        table_body=table_body,
+        stats=section.get("stats"),
+    )
 
+
+def _render_outlook_section(section: dict[str, Any]) -> str:
+    title = html.escape(section.get("title", "Section"))
+    stocks = section.get("parsed", {}).get("stocks") or []
+    rows: list[str] = []
+
+    for index, stock in enumerate(stocks):
+        rank = stock.get("rank", index + 1)
+        confidence = stock.get("confidence_pct")
+        confidence_text = html.escape(
+            str(confidence if confidence is not None else "?")
+        )
+        summary = html.escape(str(stock.get("summary") or "—"))
+        rows.append(
+            f"<tr>"
+            f"<td>#{rank}</td>"
+            f"{_render_ticker_cell(stock)}"
+            f'<td class="confidence">{confidence_text}%</td>'
+            f'<td class="summary">{summary}</td>'
+            f"</tr>"
+        )
+
+    table_body = "\n".join(rows) if rows else '<tr><td colspan="4">No tickers found</td></tr>'
+    return _wrap_section_table(
+        title,
+        headers=("Rank", "Ticker", "Confidence", "Why (2-week outlook)"),
+        table_body=table_body,
+        stats=section.get("stats"),
+    )
+
+
+def _wrap_section_table(
+    title: str,
+    *,
+    headers: tuple[str, ...],
+    table_body: str,
+    stats: dict[str, Any] | None = None,
+) -> str:
+    header_row = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
     stats_html = ""
-    stats = section.get("stats")
     if stats:
         stats_html = (
             f'<p class="stats">Scanned {stats.get("posts_scanned", "?")} posts, '
             f'{stats.get("comments_scanned", "?")} comments '
             f'({html.escape(str(stats.get("data_source", "reddit")))})</p>'
         )
-
     return f"""
       <section class="source-block">
         <h2>{title}</h2>
         <table>
           <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Ticker</th>
-              <th>Mentions</th>
-              <th>Bullish</th>
-              <th>Bearish</th>
-            </tr>
+            <tr>{header_row}</tr>
           </thead>
           <tbody>
             {table_body}

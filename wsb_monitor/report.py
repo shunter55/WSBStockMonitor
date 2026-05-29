@@ -70,6 +70,14 @@ def print_summary(report: dict[str, Any]) -> None:
             stocks = section.get("parsed", {}).get("stocks") or []
             for stock in stocks:
                 ticker = stock.get("ticker", "?")
+                if section.get("id") == "two_week_outlook":
+                    confidence = stock.get("confidence_pct", "?")
+                    summary = stock.get("summary", "")
+                    print(
+                        f"  #{stock.get('rank', '?'):>2} {ticker:6}  "
+                        f"confidence {confidence}%  |  {summary}"
+                    )
+                    continue
                 bullish = stock.get("bullish_pct", "?")
                 bearish = stock.get("bearish_pct", "?")
                 metric = stock.get("mention_metric", "")

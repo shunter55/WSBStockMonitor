@@ -22,7 +22,7 @@ class GeminiClient:
         self._client = genai.Client(api_key=settings.api_key)
 
     def query_combined(self) -> dict[str, Any]:
-        """Single Gemini request returning both top_mentions and mention_momentum."""
+        """Single Gemini request returning all Gemini report sections."""
         window_hours = self._settings.window_hours
         prompt = gemini_combined_query(window_hours)
         return self._generate(
@@ -101,7 +101,9 @@ def parse_combined_json(answer_text: str) -> dict[str, Any]:
 
 
 def _valid_combined_sections(data: dict[str, Any]) -> bool:
-    for key in ("top_mentions", "mention_momentum"):
+    from wsb_monitor.prompts import GEMINI_SECTION_IDS
+
+    for key in GEMINI_SECTION_IDS:
         section = data.get(key)
         if not isinstance(section, dict) or "stocks" not in section:
             return False

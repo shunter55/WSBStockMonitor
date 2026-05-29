@@ -101,13 +101,14 @@ Reports are saved to `data/reports/`:
 
 ## Deploy on Vercel (scheduled report + cached page)
 
-Visitors see a **pre-generated** report. A cron job rebuilds it once per day.
+Visitors see a **pre-generated** report. A cron job rebuilds it twice daily.
 
 | Path | Purpose |
 |------|---------|
 | `/` or `/api/latest` | Serve the cached HTML report (fast) |
 | `/api/cron` | Generate + save report (Vercel Cron only) |
-| Cron `0 11 * * *` | Daily refresh at 11:00 UTC |
+| Cron `0 13 * * *` | Refresh at 6:00 AM Pacific (13:00 UTC) |
+| Cron `0 1 * * *` | Refresh at 6:00 PM Pacific (01:00 UTC) |
 
 ### 1. Create Vercel Blob storage
 
@@ -145,7 +146,7 @@ Then open `https://your-app.vercel.app/` — everyone sees that cached report un
 
 ### Vercel notes
 
-- **Cron** requires [Vercel Pro](https://vercel.com/docs/cron-jobs) on your team.
+- **Cron** requires [Vercel Pro](https://vercel.com/docs/cron-jobs) on your team. Schedules are in **UTC**; the times above assume **Pacific (UTC-7, PDT)**. During PST (UTC-8), runs shift to 7:00 AM / 7:00 PM local unless you adjust the UTC hours.
 - Set **Max Duration** to 300s (Pro) under Functions — Gemini can take 1–3 minutes.
 - **Reddit on Vercel:** Public Reddit JSON returns **403** from Vercel’s servers. Scheduled runs default to **`CRON_MODE=gemini_only`**. Use your **Pi** for real Reddit counts (`python -m wsb_monitor --reddit-only`), or add `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` for OAuth on Vercel.
 - Locally (no Blob token), reports cache to `data/reports/latest.html` instead.

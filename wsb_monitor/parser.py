@@ -68,7 +68,9 @@ def normalize_gemini_parsed(parsed: dict[str, Any]) -> dict[str, Any]:
     """Map alternate Gemini field names to the report schema."""
     if "stocks" in parsed:
         parsed["stocks"] = normalize_stocks(parsed["stocks"])
-    for section_id in ("top_mentions", "mention_momentum"):
+    from wsb_monitor.prompts import GEMINI_SECTION_IDS
+
+    for section_id in GEMINI_SECTION_IDS:
         section = parsed.get(section_id)
         if isinstance(section, dict) and "stocks" in section:
             parsed[section_id] = normalize_stocks_section(section, section_id=section_id)
@@ -94,8 +96,50 @@ def normalize_stocks(
     normalized: list[dict[str, Any]] = []
     for index, item in enumerate(stocks):
         if isinstance(item, dict):
-            normalized.append(normalize_stock(item, index=index, section_id=section_id))
+            if section_id == "two_week_outlook":
+                normalized.append(normalize_outlook_stock(item, index=index))
+            else:
+                normalized.append(normalize_stock(item, index=index, section_id=section_id))
     return normalized
+
+
+def normalize_outlook_stock(stock: dict[str, Any], *, index: int) -> dict[str, Any]:
+    out = dict(stock)
+
+    rank = _coerce_int(stock.get("rank"), stock.get("position"), stock.get("order"))
+    out["rank"] = rank if rank is not None else index + 1
+
+    ticker = stock.get("ticker") or stock.get("symbol") or stock.get("ticker_symbol")
+    if ticker is not None:
+        out["ticker"] = str(ticker).upper().strip().lstrip("$")
+
+    exchange = stock.get("exchange") or stock.get("market") or stock.get("listing_exchange")
+    if exchange is not None:
+        out["exchange"] = normalize_exchange(str(exchange))
+
+    confidence = _first_present(
+        stock,
+        "confidence_pct",
+        "confidence",
+        "confidence_score",
+        "conviction_pct",
+    )
+    if confidence is not None:
+        out["confidence_pct"] = _coerce_number(confidence)
+
+    summary = _first_present(
+        stock,
+        "summary",
+        "rationale",
+        "why",
+        "reason",
+        "outlook_summary",
+        "thesis",
+    )
+    if summary is not None:
+        out["summary"] = str(summary).strip()
+
+    return out
 
 
 def normalize_stock(

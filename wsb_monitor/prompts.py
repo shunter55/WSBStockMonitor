@@ -43,14 +43,55 @@ STOCKS_RESPONSE_SCHEMA: dict = {
     "required": ["stocks", "sources_summary", "as_of"],
 }
 
+TWO_WEEK_OUTLOOK_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "stocks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "rank": {"type": "integer"},
+                    "ticker": {"type": "string"},
+                    "exchange": {
+                        "type": "string",
+                        "description": (
+                            "Google Finance exchange code, e.g. NASDAQ, NYSE, "
+                            "NYSEARCA, AMEX, OTCMKTS"
+                        ),
+                    },
+                    "company_name": {"type": "string"},
+                    "confidence_pct": {
+                        "type": "number",
+                        "description": "0-100 confidence this stock will do well in 2 weeks",
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "Brief reason based on news and chart trends",
+                    },
+                },
+                "required": ["rank", "ticker", "exchange", "confidence_pct", "summary"],
+            },
+            "minItems": 10,
+            "maxItems": 10,
+        },
+        "sources_summary": {"type": "string"},
+        "as_of": {"type": "string"},
+    },
+    "required": ["stocks", "sources_summary", "as_of"],
+}
+
 GEMINI_COMBINED_RESPONSE_SCHEMA: dict = {
     "type": "object",
     "properties": {
         "top_mentions": STOCKS_RESPONSE_SCHEMA,
         "mention_momentum": STOCKS_RESPONSE_SCHEMA,
+        "two_week_outlook": TWO_WEEK_OUTLOOK_SCHEMA,
     },
-    "required": ["top_mentions", "mention_momentum"],
+    "required": ["top_mentions", "mention_momentum", "two_week_outlook"],
 }
+
+GEMINI_SECTION_IDS = ("top_mentions", "mention_momentum", "two_week_outlook")
 
 
 def _hours_label(window_hours: int) -> str:
@@ -82,6 +123,15 @@ def momentum_mentions_query(window_hours: int) -> str:
 What are the top 10 stock tickers on Reddit r/wallstreetbets with the largest increase in mentions
 over the last {hours} compared to the prior {hours}?
 For each ticker provide the mention increase (count or percent) and bullish vs bearish sentiment %.
+""".strip()
+
+
+def two_week_outlook_query() -> str:
+    return """
+Give me the top 10 stocks most likely to do well in the next 2 weeks.
+Consider recent news and chart trends.
+For each pick provide confidence_pct (0-100, how confident you are it will do well) and a brief
+summary explaining why (news, technicals, catalysts). Include exchange for Google Finance links.
 """.strip()
 
 
@@ -139,21 +189,38 @@ Respond with ONLY valid JSON (no markdown fences, no extra text) matching this s
     ],
     "sources_summary": "...",
     "as_of": "ISO-8601 timestamp"
+  },
+  "two_week_outlook": {
+    "stocks": [
+      {
+        "rank": 1,
+        "ticker": "NVDA",
+        "exchange": "NASDAQ",
+        "confidence_pct": 82.0,
+        "summary": "Strong earnings momentum and uptrend; AI demand catalyst."
+      }
+    ],
+    "sources_summary": "...",
+    "as_of": "ISO-8601 timestamp"
   }
 }
-Each stocks array must have exactly 10 items with rank (1-10), exchange, mention_metric, and mention_value.
+Each stocks array must have exactly 10 items. Mention sections need rank, exchange, mention_metric,
+and mention_value. two_week_outlook needs rank, exchange, confidence_pct, and summary (no bullish/bearish).
 """.strip()
 
 
 def gemini_combined_query(window_hours: int) -> str:
     return f"""
-Answer both of the following about Reddit r/wallstreetbets in a single JSON response.
+Answer all three sections in a single JSON response.
 
 ## Section 1 — top_mentions
 {top_mentions_query(window_hours)}
 
 ## Section 2 — mention_momentum
 {momentum_mentions_query(window_hours)}
+
+## Section 3 — two_week_outlook
+{two_week_outlook_query()}
 """.strip()
 
 
@@ -165,5 +232,10 @@ def gemini_queries(window_hours: int) -> list[tuple[str, str, str]]:
             "mention_momentum",
             f"Top 10 fastest mention growth ({label})",
             momentum_mentions_query(window_hours),
+        ),
+        (
+            "two_week_outlook",
+            "Top 10 likely to do well (next 2 weeks)",
+            two_week_outlook_query(),
         ),
     ]
